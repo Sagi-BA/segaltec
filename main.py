@@ -278,7 +278,7 @@ def main():
         else:
             choice = st.sidebar.selectbox("דשבורד ראשי", menu, index=0)
     else:
-        print(menu)
+        # print(menu)
         choice = st.sidebar.selectbox("בחר שלב", menu, index=0)
     
     # טיפול בניווט מהיר לדשבורד
@@ -504,7 +504,7 @@ def main():
                     return ''
                 
                 # ארגון מחדש של עמודות הטבלה
-                display_df = df_proposals[["שם לקוח", "סטטוס", "סכום"]].copy()
+                display_df = df_proposals[["סטטוס", "סכום", "שם לקוח"]].copy()
                 display_df["סכום"] = display_df["סכום"].apply(lambda x: f"{x:,} ש\"ח" if x > 0 else "-")
                 
                 # הצגת טבלה מעוצבת
@@ -515,26 +515,26 @@ def main():
             else:
                 st.info("אין לקוחות במערכת")
             
-            # קישור לשלבים השונים
-            st.markdown("---")
-            st.subheader("קישורים מהירים")
+            # # קישור לשלבים השונים
+            # st.markdown("---")
+            # st.subheader("קישורים מהירים")
             
-            quick_links_col1, quick_links_col2, quick_links_col3 = st.columns(3)
+            # quick_links_col1, quick_links_col2, quick_links_col3 = st.columns(3)
             
-            with quick_links_col1:
-                if st.button("שיחת טלפון - מתעניין חדש"):
-                    st.query_params.page = "new_client"
-                    st.rerun() 
+            # with quick_links_col1:
+            #     if st.button("שיחת טלפון - מתעניין חדש"):
+            #         st.query_params.page = "new_client"
+            #         st.rerun() 
             
-            with quick_links_col2:
-                if st.button("הצעת מחיר"):
-                    st.query_params.page = "price_proposal"
-                    st.rerun()
+            # with quick_links_col2:
+            #     if st.button("הצעת מחיר"):
+            #         st.query_params.page = "price_proposal"
+            #         st.rerun()
             
-            with quick_links_col3:
-                if st.button("מעקב ותזכורות"):
-                    st.query_params.page = "followup"
-                    st.rerun()
+            # with quick_links_col3:
+            #     if st.button("מעקב ותזכורות"):
+            #         st.query_params.page = "followup"
+            #         st.rerun()
             
 
         elif choice == "שיחת טלפון - מתעניין חדש":

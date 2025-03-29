@@ -250,7 +250,8 @@ def main():
     df_proposals = prepare_proposals_dashboard_data(data)
     
     # יצירת תפריט צדדי
-    menu = ["שיחת טלפון - מתעניין חדש", 
+    menu = ["דשבורד ראשי",
+            "שיחת טלפון - מתעניין חדש", 
             "פגישה/דוגמאות", 
             "הצעת מחיר", 
             "אישור הזמנה", 
@@ -274,17 +275,18 @@ def main():
         elif page == "followup":
             choice = "מעקב ותזכורות"
         else:
-            choice = st.sidebar.selectbox("בחר שלב", menu, index=0)
+            choice = st.sidebar.selectbox("דשבורד ראשי", menu, index=0)
     else:
+        print(menu)
         choice = st.sidebar.selectbox("בחר שלב", menu, index=0)
     
     # טיפול בניווט מהיר לדשבורד
-    if manage_option == "דשבורד ראשי":
-        st.query_params.clear()
-        choice = None  # מאפשר הצגת הדשבורד
+    # if manage_option == "דשבורד ראשי":
+    #     st.query_params.clear()
+    #     choice = None  # מאפשר הצגת הדשבורד
     
     # רשימת לקוחות קיימים
-    client_names = list(data.keys())
+    client_names = list(data.keys())    
     
     # הצגת דשבורד בעמוד הראשי אם לא נבחר שלב או יש שינוי query params
     if manage_option == "ניהול סוגי מוצרים":
@@ -416,9 +418,125 @@ def main():
             st.write(f"**גודל קובץ סטטוסים:** {status_file_size:.2f} KB")
             st.write(f"**גודל כולל:** {(client_file_size + products_file_size + status_file_size):.2f} KB")
     
-    elif choice in menu:
+    elif choice in menu:        
         # קוד לטיפול בשלבים השונים
-        if choice == "שיחת טלפון - מתעניין חדש":
+        if choice == "דשבורד ראשי":
+            # st.query_params.clear()
+            # choice = None  # מאפשר הצגת הדשבורד
+            # הצגת הדשבורד הראשי
+            st.header("דשבורד הצעות מחיר")
+            
+            # חלוקת המסך לטורים
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # יצירת גרף עוגה לפי סטטוס
+                if not df_proposals.empty:
+                    status_counts = df_proposals["סטטוס"].value_counts().reset_index()
+                    status_counts.columns = ["סטטוס", "כמות"]
+                    
+                    # מיפוי צבעים
+                    color_map = {
+                        "לא נשלחה": "red",
+                        "נשלחה": "orange",
+                        "מאושרת": "green"
+                    }
+                    
+                    fig_pie = px.pie(
+                        status_counts,
+                        values="כמות",
+                        names="סטטוס",
+                        title="התפלגות סטטוס הצעות מחיר",
+                        color="סטטוס",
+                        color_discrete_map=color_map
+                    )
+                    fig_pie.update_traces(textinfo="percent+label")
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                else:
+                    st.info("אין מספיק נתונים להצגת הגרף")
+            
+            with col2:
+                # יצירת גרף עמודות לפי סכומי הצעות המחיר
+                if not df_proposals.empty and df_proposals["סכום"].sum() > 0:
+                    # סינון לקוחות שיש להם הצעת מחיר
+                    df_with_proposals = df_proposals[df_proposals["סכום"] > 0]
+                    
+                    # מיפוי צבעים לפי סטטוס
+                    colors = [
+                        "red" if status == "לא נשלחה" else 
+                        "orange" if status == "נשלחה" else 
+                        "green" 
+                        for status in df_with_proposals["סטטוס"]
+                    ]
+                    
+                    fig_bar = go.Figure()
+                    fig_bar.add_trace(go.Bar(
+                        x=df_with_proposals["שם לקוח"],
+                        y=df_with_proposals["סכום"],
+                        marker_color=colors,
+                        text=df_with_proposals["סכום"],
+                        textposition="auto"
+                    ))
+                    
+                    fig_bar.update_layout(
+                        title="סכומי הצעות מחיר לפי לקוח",
+                        xaxis_title="שם לקוח",
+                        yaxis_title="סכום (ש\"ח)"
+                    )
+                    
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                else:
+                    st.info("אין מספיק נתונים להצגת הגרף")
+            
+            # טבלת לקוחות וסטטוס הצעות מחיר
+            st.subheader("פירוט הצעות מחיר")
+            
+            if not df_proposals.empty:
+                # הוספת עיצוב צבעוני לטבלה
+                def highlight_status(val):
+                    if val == "לא נשלחה":
+                        return 'background-color: rgba(255, 0, 0, 0.2)'
+                    elif val == "נשלחה":
+                        return 'background-color: rgba(255, 165, 0, 0.2)'
+                    elif val == "מאושרת":
+                        return 'background-color: rgba(0, 128, 0, 0.2)'
+                    return ''
+                
+                # ארגון מחדש של עמודות הטבלה
+                display_df = df_proposals[["שם לקוח", "סטטוס", "סכום"]].copy()
+                display_df["סכום"] = display_df["סכום"].apply(lambda x: f"{x:,} ש\"ח" if x > 0 else "-")
+                
+                # הצגת טבלה מעוצבת
+                st.dataframe(
+                    display_df.style.applymap(highlight_status, subset=["סטטוס"]),
+                    use_container_width=True
+                )
+            else:
+                st.info("אין לקוחות במערכת")
+            
+            # קישור לשלבים השונים
+            st.markdown("---")
+            st.subheader("קישורים מהירים")
+            
+            quick_links_col1, quick_links_col2, quick_links_col3 = st.columns(3)
+            
+            with quick_links_col1:
+                if st.button("שיחת טלפון - מתעניין חדש"):
+                    st.query_params.page = "new_client"
+                    st.rerun() 
+            
+            with quick_links_col2:
+                if st.button("הצעת מחיר"):
+                    st.query_params.page = "price_proposal"
+                    st.rerun()
+            
+            with quick_links_col3:
+                if st.button("מעקב ותזכורות"):
+                    st.query_params.page = "followup"
+                    st.rerun()
+            
+
+        elif choice == "שיחת טלפון - מתעניין חדש":
             st.header("שיחת טלפון - הוספת מתעניין חדש")
             
             with st.form("new_client_form"):
@@ -521,7 +639,7 @@ def main():
                     for key, value in meeting_info.items():
                         st.write(f"**{key}:** {value}")
         
-        elif choice == "הצעת מחיר":
+        elif choice == "הצעת מחיר":            
             st.header("הצעת מחיר")
             
             # בחירת לקוח מהרשימה
@@ -814,117 +932,8 @@ def main():
                             st.write(f"**{key}:** {value}")
     
     else:
-        # הצגת הדשבורד הראשי
-        st.header("דשבורד הצעות מחיר")
-        
-        # חלוקת המסך לטורים
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # יצירת גרף עוגה לפי סטטוס
-            if not df_proposals.empty:
-                status_counts = df_proposals["סטטוס"].value_counts().reset_index()
-                status_counts.columns = ["סטטוס", "כמות"]
-                
-                # מיפוי צבעים
-                color_map = {
-                    "לא נשלחה": "red",
-                    "נשלחה": "orange",
-                    "מאושרת": "green"
-                }
-                
-                fig_pie = px.pie(
-                    status_counts,
-                    values="כמות",
-                    names="סטטוס",
-                    title="התפלגות סטטוס הצעות מחיר",
-                    color="סטטוס",
-                    color_discrete_map=color_map
-                )
-                fig_pie.update_traces(textinfo="percent+label")
-                st.plotly_chart(fig_pie, use_container_width=True)
-            else:
-                st.info("אין מספיק נתונים להצגת הגרף")
-        
-        with col2:
-            # יצירת גרף עמודות לפי סכומי הצעות המחיר
-            if not df_proposals.empty and df_proposals["סכום"].sum() > 0:
-                # סינון לקוחות שיש להם הצעת מחיר
-                df_with_proposals = df_proposals[df_proposals["סכום"] > 0]
-                
-                # מיפוי צבעים לפי סטטוס
-                colors = [
-                    "red" if status == "לא נשלחה" else 
-                    "orange" if status == "נשלחה" else 
-                    "green" 
-                    for status in df_with_proposals["סטטוס"]
-                ]
-                
-                fig_bar = go.Figure()
-                fig_bar.add_trace(go.Bar(
-                    x=df_with_proposals["שם לקוח"],
-                    y=df_with_proposals["סכום"],
-                    marker_color=colors,
-                    text=df_with_proposals["סכום"],
-                    textposition="auto"
-                ))
-                
-                fig_bar.update_layout(
-                    title="סכומי הצעות מחיר לפי לקוח",
-                    xaxis_title="שם לקוח",
-                    yaxis_title="סכום (ש\"ח)"
-                )
-                
-                st.plotly_chart(fig_bar, use_container_width=True)
-            else:
-                st.info("אין מספיק נתונים להצגת הגרף")
-        
-        # טבלת לקוחות וסטטוס הצעות מחיר
-        st.subheader("פירוט הצעות מחיר")
-        
-        if not df_proposals.empty:
-            # הוספת עיצוב צבעוני לטבלה
-            def highlight_status(val):
-                if val == "לא נשלחה":
-                    return 'background-color: rgba(255, 0, 0, 0.2)'
-                elif val == "נשלחה":
-                    return 'background-color: rgba(255, 165, 0, 0.2)'
-                elif val == "מאושרת":
-                    return 'background-color: rgba(0, 128, 0, 0.2)'
-                return ''
-            
-            # ארגון מחדש של עמודות הטבלה
-            display_df = df_proposals[["שם לקוח", "סטטוס", "סכום"]].copy()
-            display_df["סכום"] = display_df["סכום"].apply(lambda x: f"{x:,} ש\"ח" if x > 0 else "-")
-            
-            # הצגת טבלה מעוצבת
-            st.dataframe(
-                display_df.style.applymap(highlight_status, subset=["סטטוס"]),
-                use_container_width=True
-            )
-        else:
-            st.info("אין לקוחות במערכת")
-        
-        # קישור לשלבים השונים
-        st.markdown("---")
-        st.subheader("קישורים מהירים")
-        
-        quick_links_col1, quick_links_col2, quick_links_col3 = st.columns(3)
-        
-        with quick_links_col1:
-            if st.button("שיחת טלפון - מתעניין חדש"):
-                st.query_params.page = "new_client"
-                st.rerun()
-        
-        with quick_links_col2:
-            if st.button("הצעת מחיר"):
-                st.query_params.page = "price_proposal"
-                st.rerun()
-        
-        with quick_links_col3:
-            if st.button("מעקב ותזכורות"):
-                st.query_params.page = "followup"
-                st.rerun()
+        st.header("ברוך הבא למערכת ניהול לקוחות")
+        st.write("בחר מהתפריט בצד ימין כדי להתחיל.")
     
     # הצגת כל המידע על לקוח נבחר
     st.sidebar.markdown("---")

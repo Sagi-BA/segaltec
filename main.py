@@ -12,7 +12,8 @@ import io
 import base64
 
 # הגדרת הקבצי JSON
-DATA_DIR = "DATA"
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../persistent_data"))
+print(DATA_DIR)
 DATA_FILE = os.path.join(DATA_DIR, "clients_data.json")
 PRODUCTS_FILE = os.path.join(DATA_DIR, "products.json")
 STATUS_FILE = os.path.join(DATA_DIR, "status.json")
